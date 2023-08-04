@@ -9,17 +9,29 @@ import com.youarelaunched.challenge.di.DispatcherIo
 import kotlinx.coroutines.*
 import javax.inject.Inject
 import kotlin.text.Typography.bullet
+import com.youarelaunched.challenge.util.Result
+import com.youarelaunched.challenge.util.mapError
+import com.youarelaunched.challenge.util.mapSuccess
 
 class VendorsRepositoryImpl @Inject constructor(
     @DispatcherIo private val workDispatcher: CoroutineDispatcher,
     private val api: ApiVendors
 ) : VendorsRepository {
 
-    override suspend fun getVendors(): List<Vendor> = withContext(workDispatcher) {
-        api.getVendors().map {
-            it.toVendor()
-        }
+    override suspend fun getAllVendors(): Result<List<Vendor>, Throwable> = withContext(workDispatcher) {
+        return@withContext api.getVendors().mapSuccess { networkVendors ->
+            networkVendors.map { networkVendor -> networkVendor.toVendor() }
+        }.mapError { it }
     }
+
+    override suspend fun getVendors(query: String): Result<List<Vendor>, Throwable> =
+        withContext(workDispatcher) {
+            return@withContext api.getVendors().mapSuccess { networkVendors ->
+                networkVendors
+                    .filter { it.companyName.contains(query, ignoreCase = true) }
+                    .map { networkVendor -> networkVendor.toVendor() }
+            }.mapError { it }
+        }
 
     private suspend fun NetworkVendor.toVendor() = coroutineScope {
 

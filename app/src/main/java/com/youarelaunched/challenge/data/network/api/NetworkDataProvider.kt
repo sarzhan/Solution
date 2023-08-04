@@ -9,23 +9,28 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import com.youarelaunched.challenge.util.Result
 
 class NetworkDataProvider @Inject constructor(
     @DispatcherIo private val workDispatcher: CoroutineDispatcher,
     @ApplicationContext private val appContext: Context
 ) : ApiVendors {
 
-    override suspend fun getVendors(): List<NetworkVendor> = withContext(workDispatcher) {
-        val json = appContext.assets
-            .open("vendors.json")
-            .bufferedReader()
-            .use {
-                it.readText()
-            }
+    override suspend fun getVendors(): Result<List<NetworkVendor>, Throwable> = withContext(workDispatcher) {
+        try {
+            val json = appContext.assets
+                .open("vendors.json")
+                .bufferedReader()
+                .use { it.readText() }
 
-        Gson()
-            .fromJson(json, NetworkVendorsData::class.java)
-            .vendors
+            val vendors = Gson()
+                .fromJson(json, NetworkVendorsData::class.java)
+                .vendors
+
+            Result.Success(vendors)
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
     }
 
 }
